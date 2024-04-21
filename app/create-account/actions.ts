@@ -1,13 +1,6 @@
 "use server";
+import { PASSWORD_MIN_LENGTH, PASSWORD_REGEX, PASSWORD_REGEX_ERROR } from "../lib/constants";
 import { z } from "zod";
-
-const checkUsername = (username: string) => {
-  !username.includes("potato");
-}
-
-const passwordRegex = new RegExp(
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*?[#?!@$%^&*-]).+$/
-);
 
 const formSchema = z.object({
   username: z
@@ -15,27 +8,21 @@ const formSchema = z.object({
       invalid_type_error: "Username must be a string.",
       required_error: "Username required."
     })
-    .min(3, "Way too short.")
-    .max(10, "That is too looooog")
     .trim()
     .toLowerCase()
-    .transform((username) => `${username}⭐️`)
-    .refine(
-      checkUsername,
-      "No potatoes allowed."
-    ),
+    .transform((username) => `${username}⭐️`),
   email: z.string().email().toLowerCase(),
   password: z
     .string()
-    .min(10)
+    .min(PASSWORD_MIN_LENGTH)
     .regex(
-      passwordRegex,
-      "Passwords must contain at least one UPPERCASE, lowercase, number and special characters #?!@$%^&*-"
+      PASSWORD_REGEX,
+      PASSWORD_REGEX_ERROR,
     ),
-  confirm_password: z.string().min(10),
+  confirm_password: z.string().min(PASSWORD_MIN_LENGTH),
 })
-  .superRefine((val, ctx) => {
-    if (val.password !== val.confirm_password) {
+  .superRefine(({ password, confirm_password }, ctx) => {
+    if (password !== confirm_password) {
       ctx.addIssue({
         code: "custom",
         message: "Two passwords should be equal.",
