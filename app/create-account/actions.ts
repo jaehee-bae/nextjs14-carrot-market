@@ -3,6 +3,9 @@ import { PASSWORD_MIN_LENGTH, PASSWORD_REGEX, PASSWORD_REGEX_ERROR } from "@/lib
 import db from "@/lib/db"
 import { z } from "zod";
 import bcrypt from "bcrypt";
+import { getIronSession } from "iron-session";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 const checkUniqueUsername = async (username: string) => {
   const user = await db.user.findUnique({
@@ -72,8 +75,9 @@ export async function createAccount(prevState: any, formData: FormData) {
     return result.error.flatten();
   } else {
     // hash password
-    // save the user to db
     const hashedPassword = await bcrypt.hash(result.data.password, 12);
+    
+    // save the user to db
     const user = await db.user.create({
       data: {
         username: result.data.username,
@@ -84,7 +88,17 @@ export async function createAccount(prevState: any, formData: FormData) {
         id: true,
       },
     });
+
     // log the user in
+    const cookie = await getIronSession(cookies(), {
+      cookieName: "delicious-karrot",
+      password: process.env.COOKIE_PASSWORD!,
+    });
+    //@ts-ignore
+    cookie.id = user.id;
+    await cookie.save();
+    
     // redirect "/home"
+    redirect("/profile");
   }
 }
